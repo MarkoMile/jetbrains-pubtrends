@@ -13,7 +13,7 @@ A web service that performs clustering analysis on Gene Expression Omnibus (GEO)
 - Interactive visualizations using PCA dimensionality reduction
 - Hover information showing GEO IDs and related PMIDs
 
-## Example media
+## Example
 
 <p align="center">
 <img src="media/example.jpg" alt="example screenshot">
