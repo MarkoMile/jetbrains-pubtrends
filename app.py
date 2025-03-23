@@ -10,15 +10,15 @@ The workflow includes:
 2. Fetching associated GEO datasets using NCBI E-utilities
 3. Retrieving metadata for each GEO dataset
 4. Converting metadata to TF-IDF vectors
-5. Performing DBSCAN clustering
-6. Creating an interactive visualization with PCA dimensionality reduction
+5. Performing DBSCAN and Agglomerative clustering
+6. Creating interactive visualizations with PCA dimensionality reduction
 
 Technical notes:
     - Initially, the PMIDs are read from the form, and the geo_ids are retrieved using the NCBI E-utilities in bulk.
     - Then, the PMIDs are retrieved for each geo_id using the NCBI E-utilities element-wise, this is slow, because it requires a lot of requests.
     - Only PMIDs that are present in the form are considered - this is optional, and can be removed.
     - Then, the metadata is retrieved for each geo_id using the NCBI E-utilities.
-    - DBSCAN is used to cluster the metadata vectors.
+    - Both DBSCAN and Agglomerative clustering are used to cluster the metadata vectors.
 """
 
 import dash
@@ -27,7 +27,7 @@ import requests
 import xml.etree.ElementTree as ET
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.decomposition import PCA
-from sklearn.cluster import DBSCAN
+from sklearn.cluster import DBSCAN, AgglomerativeClustering
 import numpy as np
 import plotly.graph_objects as go
 
@@ -56,10 +56,12 @@ app.layout = html.Div([
     dcc.Loading(
       id="loading",
       type="default",
-      children=[html.Div(id='plot-container')]
+      children=[
+          html.Div(id='dbscan-plot-container'),
+          html.Div(id='agglo-plot-container')
+      ]
     ),
     html.Div(id='error-output', style={'color': 'red', 'marginBottom': 20}),
-    # html.Div(id='plot-container')
 ])
 
 def process_pmids(pmids_text):
@@ -123,6 +125,10 @@ def process_pmids(pmids_text):
         dbscan = DBSCAN(eps=0.5, min_samples=2)
         dbscan.fit(metadata_vectors)
         
+        # Perform Agglomerative clustering
+        agglo = AgglomerativeClustering(n_clusters=5)
+        agglo_labels = agglo.fit_predict(metadata_vectors.toarray())
+        
         # Reduce dimensionality for visualization
         pca = PCA(n_components=2)
         metadata_2d = pca.fit_transform(metadata_vectors.toarray())
@@ -133,10 +139,10 @@ def process_pmids(pmids_text):
             pmids = pmids_dict[geo_id]
             hover_text = f"GEO ID: {geo_id}<br>Related PMIDs:<br>" + "<br>".join(pmids)
             hover_texts.append(hover_text)
-
-        # Create the plot
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
+        
+        # Create the DBSCAN plot
+        dbscan_fig = go.Figure()
+        dbscan_fig.add_trace(go.Scatter(
             x=metadata_2d[:, 0],
             y=metadata_2d[:, 1],
             mode='markers',
@@ -152,21 +158,49 @@ def process_pmids(pmids_text):
             name='GEO Datasets'
         ))
         
-        fig.update_layout(
-            title='Interactive DBSCAN Clustering of GEO Metadata',
+        dbscan_fig.update_layout(
+            title='DBSCAN Clustering of GEO Metadata',
             xaxis_title='First Principal Component',
             yaxis_title='Second Principal Component',
             showlegend=True,
             hovermode='closest'
         )
         
-        return fig, None
+        # Create the Agglomerative clustering plot
+        agglo_fig = go.Figure()
+        agglo_fig.add_trace(go.Scatter(
+            x=metadata_2d[:, 0],
+            y=metadata_2d[:, 1],
+            mode='markers',
+            marker=dict(
+                size=10,
+                color=agglo_labels,
+                colorscale='Viridis',
+                showscale=True,
+                colorbar=dict(title='Cluster')
+            ),
+            text=hover_texts,
+            hoverinfo='text',
+            name='GEO Datasets'
+        ))
+        
+        agglo_fig.update_layout(
+            title='Agglomerative Clustering of GEO Metadata',
+            xaxis_title='First Principal Component',
+            yaxis_title='Second Principal Component',
+            showlegend=True,
+            hovermode='closest'
+        )
+        
+        return [dcc.Graph(id='dbscan-plot', figure=dbscan_fig),
+                dcc.Graph(id='agglo-plot', figure=agglo_fig)], None
         
     except Exception as e:
         return None, f"An error occurred: {str(e)}"
 
 @app.callback(
-    [Output('plot-container', 'children'),
+    [Output('dbscan-plot-container', 'children'),
+     Output('agglo-plot-container', 'children'),
      Output('error-output', 'children')],
     [Input('submit-button', 'n_clicks')],
     [State('pmids-input', 'value')]
@@ -174,16 +208,16 @@ def process_pmids(pmids_text):
 def update_graph(n_clicks, pmids_text):
     
     if n_clicks == 0:
-        return None, None
+        return None, None, None
         
     if not pmids_text:
-        return None, "Please enter PMIDs"
+        return None, None, "Please enter PMIDs"
         
-    fig, error = process_pmids(pmids_text)
+    plots, error = process_pmids(pmids_text)
     if error:
-        return None, error
+        return None, None, error
         
-    return dcc.Graph(id='cluster-plot', figure=fig), None
+    return plots[0], plots[1], None
 
 if __name__ == '__main__':
-    app.run(debug=True) 
+    app.run(debug=False) 
