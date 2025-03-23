@@ -13,6 +13,12 @@ A web service that performs clustering analysis on Gene Expression Omnibus (GEO)
 - Interactive visualizations using PCA dimensionality reduction
 - Hover information showing GEO IDs and related PMIDs
 
+## Example media
+
+<p align="center">
+<img src="media/example.jpg" alt="example screenshot">
+</p>
+
 ## Prerequisites
 
 - Python 3.x
@@ -70,6 +76,7 @@ The service follows this workflow:
 
 ## Notes
 
+- Inputs with a large number of PMIDs might take a while to process
 - The service uses NCBI E-utilities for data retrieval
 - Only PMIDs present in the input form are considered in the analysis
 - Both clustering methods (DBSCAN and Agglomerative) are used to provide different perspectives on the data relationships
