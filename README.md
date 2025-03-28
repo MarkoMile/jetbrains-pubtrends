@@ -5,6 +5,9 @@ A web service that performs clustering analysis on Gene Expression Omnibus (GEO)
 ## Features
 
 - Interactive web interface for inputting PubMed IDs
+- Two data retrieval modes:
+  - Entrez API Mode: Fast and reliable metadata retrieval
+  - FTP Mode: Comprehensive metadata retrieval (experimental)
 - Automatic retrieval of associated GEO datasets using NCBI E-utilities
 - Metadata extraction and analysis from GEO datasets
 - Two clustering approaches:
@@ -12,6 +15,7 @@ A web service that performs clustering analysis on Gene Expression Omnibus (GEO)
   - Agglomerative clustering for hierarchical grouping
 - Interactive visualizations using PCA dimensionality reduction
 - Hover information showing GEO IDs and related PMIDs
+- Processing time display for each analysis
 
 ## Example
 
@@ -24,6 +28,7 @@ A web service that performs clustering analysis on Gene Expression Omnibus (GEO)
 - Python 3.x
 - Required Python packages:
   - dash
+  - flask
   - requests
   - scikit-learn
   - numpy
@@ -54,14 +59,20 @@ python app.py
 
 2. Open your web browser and navigate to `http://localhost:8050`
 
-3. Enter one or more PubMed IDs in the text area (one ID per line)
+3. Select your preferred data retrieval mode:
+
+   - Entrez API Mode: Recommended for most use cases
+   - FTP Mode: For more comprehensive metadata (experimental)
+
+4. Enter one or more PubMed IDs in the text area (one ID per line)
    (may not work for a small number of IDs, because of the requirements of clustering algorithms)
 
-4. Click "Generate Clusters" to analyze the datasets
+5. Click "Generate Clusters" to analyze the datasets
 
-5. View the interactive visualizations showing:
+6. View the interactive visualizations showing:
    - DBSCAN clustering results
    - Agglomerative clustering results
+   - Processing time for the analysis
 
 ## Technical Details
 
@@ -69,7 +80,9 @@ The service follows this workflow:
 
 1. Accepts PMIDs from the web form
 2. Fetches associated GEO datasets using NCBI E-utilities in bulk
-3. Retrieves metadata for each GEO dataset
+3. Retrieves metadata for each GEO dataset using either:
+   - Entrez API: Fast and reliable method
+   - FTP: Comprehensive method with additional metadata fields
 4. Converts metadata to TF-IDF vectors
 5. Performs DBSCAN and Agglomerative clustering
 6. Creates interactive visualizations with PCA dimensionality reduction
@@ -81,3 +94,5 @@ The service follows this workflow:
 - Only PMIDs present in the input form are considered in the analysis
 - Both clustering methods (DBSCAN and Agglomerative) are used to provide different perspectives on the data relationships
 - The visualizations are interactive and allow hovering over points to see detailed information
+- FTP mode may be unstable due to current bugs with FTP retrieval and decompression of gzip files
+- Processing time is displayed after each analysis
