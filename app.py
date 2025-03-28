@@ -285,7 +285,7 @@ def process_pmids_ftp(pmids_text):
                 if accession.isdigit():
                     range_dir = f"GSE{accession[:-3]}nnn"
                     # Parse FTP URL components
-                    ftp_path = f"/geo/series/{range_dir}/GSE{accession}/soft/GSE{accession}_family.soft.gz"
+                    ftp_path = f"geo/series/{range_dir}/GSE{accession}/soft/GSE{accession}_family.soft.gz"
                     
                     # Create a temporary file
                     with tempfile.NamedTemporaryFile(delete=True,delete_on_close=False,suffix='.gz') as temp_file:
@@ -296,6 +296,8 @@ def process_pmids_ftp(pmids_text):
                         ftp.login()  # anonymous login
                         try:
                             ftp.retrbinary(f'RETR {ftp_path}', temp_file.write)
+                        except Exception as e:
+                            print(f"error downloading {accession} : {e}")
                         finally:
                             ftp.quit()
                             temp_file.close()
@@ -333,8 +335,6 @@ def process_pmids_ftp(pmids_text):
         # Ensure we have metadata for each GEO ID
         if len(metadata_list) == 0:
             return None, "Failed to retrieve metadata for any GEO datasets"
-        elif len(metadata_list) != len(geo_accessions.items()):
-            return None, "Failed to retrieve metadata for some GEO datasets."
         
         # Vectorize metadata
         vectorizer = TfidfVectorizer()
@@ -412,8 +412,13 @@ def process_pmids_ftp(pmids_text):
             hovermode='closest'
         )
     
-        return [dcc.Graph(id='dbscan-plot', figure=dbscan_fig),
+        if len(metadata_list) != len(geo_accessions.items()):
+            print(f"Failed to retrieve metadata for {len(geo_accessions.items())-len(metadata_list)} GEO datasets.")
+            return [dcc.Graph(id='dbscan-plot', figure=dbscan_fig),
                 dcc.Graph(id='agglo-plot', figure=agglo_fig)], None
+        else:
+            return [dcc.Graph(id='dbscan-plot', figure=dbscan_fig),
+                    dcc.Graph(id='agglo-plot', figure=agglo_fig)], None
         
     except Exception as e:
         return None, f"An error occurred: {str(e)}"
