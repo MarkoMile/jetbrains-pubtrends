@@ -33,6 +33,7 @@ import gzip
 import os
 import ftplib
 import tempfile
+import time
 
 # Initialize the Dash app
 app = dash.Dash(__name__)
@@ -48,7 +49,7 @@ app.layout = html.Div([
             id='retrieval-mode',
             options=[
                 {'label': 'Entrez - API Mode', 'value': 'entrez'},
-                {'label': 'FTP - Full Data Mode (may be slower)', 'value': 'ftp'}
+                {'label': 'FTP - Full Data Mode (unstable)', 'value': 'ftp'}
             ],
             value='entrez',
             style={'width': '100%', 'marginBottom': 20}
@@ -70,12 +71,16 @@ app.layout = html.Div([
       id="loading",
       type="default",
       children=[
+          html.Div(id='timing-label', style={'textAlign': 'center', 'marginTop': 20}),
           html.Div(id='dbscan-plot-container'),
           html.Div(id='agglo-plot-container')
       ]
     ),
     html.Div(id='error-output', style={'color': 'red', 'marginBottom': 20}),
 ])
+
+# Add a global variable to store the start time
+start_time = None
 
 def process_pmids_entrez(pmids_text):
     """Process the input PMIDs and generate the clustering visualization."""
@@ -416,18 +421,24 @@ def process_pmids_ftp(pmids_text):
 @app.callback(
     [Output('dbscan-plot-container', 'children'),
      Output('agglo-plot-container', 'children'),
-     Output('error-output', 'children')],
+     Output('error-output', 'children'),
+     Output('timing-label', 'children')],
     [Input('submit-button', 'n_clicks')],
     [State('pmids-input', 'value'),
      State('retrieval-mode', 'value')]
 )
 def update_graph(n_clicks, pmids_text, ret_mode):
+    global start_time
     
     if n_clicks == 0:
-        return None, None, None
+        return None, None, None, None
         
     if not pmids_text:
-        return None, None, "Please enter PMIDs"
+        return None, None, "Please enter PMIDs", None
+
+    # Record start time when button is clicked
+    if start_time is None:
+        start_time = time.time()
 
     if ret_mode == 'entrez':    
         plots, error = process_pmids_entrez(pmids_text)
@@ -435,10 +446,18 @@ def update_graph(n_clicks, pmids_text, ret_mode):
         plots, error = process_pmids_ftp(pmids_text)
     else:
         plots, error = None, "unexpected error, check retrieval mode"
+    
+    # Calculate elapsed time
+    elapsed_time = time.time() - start_time
+    timing_text = f"Graphs generated in {elapsed_time:.2f} seconds"
+    
+    # Reset start time for next run
+    start_time = None
+    
     if error:
-        return None, None, error
+        return None, None, error, None
         
-    return plots[0], plots[1], None
+    return plots[0], plots[1], None, timing_text
 
 if __name__ == '__main__':
     app.run(debug=False) 
